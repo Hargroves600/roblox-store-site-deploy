@@ -532,6 +532,8 @@
   function selectPayment(el) {
     document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
     el.classList.add('selected');
+    // Mostra bloco Pix se método Pix for selecionado
+    Checkout.showPixInfo(el.dataset.method === 'pix');
   }
 
   // ─── Mobile menu ──────────────────────────────────────────
