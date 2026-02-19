@@ -1,0 +1,246 @@
+// ============================================================
+// STORE.JS - Shopping cart, checkout, and store logic
+// ============================================================
+
+const Cart = {
+  items: [],
+
+  load() {
+    this.items = JSON.parse(localStorage.getItem('rbx_cart') || '[]');
+  },
+
+  save() {
+    localStorage.setItem('rbx_cart', JSON.stringify(this.items));
+    this.updateUI();
+  },
+
+  add(productId) {
+    const product = DB.getProduct(productId);
+    if (!product) return;
+    const stock = DB.getStockCount(productId);
+    if (stock === 0) { showNotification('❌ Produto sem estoque!', 'error'); return; }
+    const existing = this.items.find(i => i.productId === productId);
+    if (existing) { showNotification('ℹ️ Item já está no carrinho', 'info'); return; }
+    this.items.push({ productId, name: product.name, price: product.price, image: product.image });
+    this.save();
+    showNotification('✅ Adicionado ao carrinho!', 'success');
+    this.animateCartIcon();
+  },
+
+  remove(productId) {
+    this.items = this.items.filter(i => i.productId !== productId);
+    this.save();
+  },
+
+  clear() {
+    this.items = [];
+    this.save();
+  },
+
+  getTotal() {
+    return this.items.reduce((sum, i) => sum + i.price, 0);
+  },
+
+  getCount() {
+    return this.items.length;
+  },
+
+  updateUI() {
+    const count = this.getCount();
+    document.querySelectorAll('.cart-count').forEach(el => {
+      el.textContent = count;
+      el.style.display = count > 0 ? 'flex' : 'none';
+    });
+    this.renderCartPanel();
+  },
+
+  animateCartIcon() {
+    const icon = document.querySelector('.cart-btn');
+    if (icon) { icon.classList.add('bounce'); setTimeout(() => icon.classList.remove('bounce'), 400); }
+  },
+
+  renderCartPanel() {
+    const panel = document.getElementById('cart-panel');
+    if (!panel) return;
+    const list = document.getElementById('cart-items-list');
+    const total = document.getElementById('cart-total');
+    if (!list) return;
+
+    if (this.items.length === 0) {
+      list.innerHTML = `<div class="cart-empty"><div class="cart-empty-icon">🛒</div><p>Seu carrinho está vazio</p></div>`;
+    } else {
+      list.innerHTML = this.items.map(item => `
+        <div class="cart-item">
+          <span class="cart-item-icon">${item.image}</span>
+          <div class="cart-item-info">
+            <span class="cart-item-name">${item.name}</span>
+            <span class="cart-item-price">R$ ${item.price.toFixed(2)}</span>
+          </div>
+          <button class="cart-item-remove" onclick="Cart.remove('${item.productId}')">✕</button>
+        </div>
+      `).join('');
+    }
+    if (total) total.textContent = `R$ ${this.getTotal().toFixed(2)}`;
+  },
+
+  toggle() {
+    const panel = document.getElementById('cart-panel');
+    if (panel) panel.classList.toggle('open');
+  },
+
+  close() {
+    const panel = document.getElementById('cart-panel');
+    if (panel) panel.classList.remove('open');
+  }
+};
+
+// ─── Checkout ────────────────────────────────────────────────
+const Checkout = {
+  currentOrder: null,
+
+  open() {
+    if (Cart.getCount() === 0) { showNotification('⚠️ Adicione itens ao carrinho primeiro!', 'warning'); return; }
+    Cart.close();
+    document.getElementById('checkout-modal').classList.add('open');
+    this.renderSummary();
+  },
+
+  close() {
+    document.getElementById('checkout-modal').classList.remove('open');
+  },
+
+  renderSummary() {
+    const summary = document.getElementById('checkout-summary');
+    if (!summary) return;
+    summary.innerHTML = Cart.items.map(item => `
+      <div class="checkout-item">
+        <span>${item.image} ${item.name}</span>
+        <strong>R$ ${item.price.toFixed(2)}</strong>
+      </div>
+    `).join('') + `
+    <div class="checkout-total-line">
+      <span>Total</span>
+      <strong class="checkout-total-val">R$ ${Cart.getTotal().toFixed(2)}</strong>
+    </div>`;
+  },
+
+  async process() {
+    const name = document.getElementById('checkout-name')?.value?.trim();
+    const email = document.getElementById('checkout-email')?.value?.trim();
+    const payment = document.querySelector('.payment-method.selected')?.dataset?.method;
+
+    if (!name || !email) { showNotification('⚠️ Preencha todos os campos!', 'warning'); return; }
+    if (!payment) { showNotification('⚠️ Selecione um método de pagamento!', 'warning'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showNotification('⚠️ Email inválido!', 'warning'); return; }
+
+    const btn = document.getElementById('checkout-btn');
+    btn.innerHTML = '<span class="loading-spinner"></span> Processando...';
+    btn.disabled = true;
+
+    // Simulate payment processing
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Deliver products
+    const deliveries = [];
+    for (const cartItem of Cart.items) {
+      const account = DB.getAvailableAccount(cartItem.productId);
+      if (account) {
+        const orderId = 'ORD-' + Date.now();
+        DB.markAccountSold(account.id, orderId);
+        deliveries.push({
+          product: cartItem.name,
+          nick: account.nick,
+          key: account.password,
+          orderId
+        });
+      }
+    }
+
+    // Create order record
+    const order = DB.createOrder({
+      customerName: name,
+      customerEmail: email,
+      paymentMethod: payment,
+      items: Cart.items,
+      total: Cart.getTotal(),
+      deliveries
+    });
+
+    this.currentOrder = { order, deliveries };
+    Cart.clear();
+    this.close();
+    this.showDelivery(deliveries, order);
+  },
+
+  showDelivery(deliveries, order) {
+    const modal = document.getElementById('delivery-modal');
+    const content = document.getElementById('delivery-content');
+    if (!modal || !content) return;
+
+    content.innerHTML = `
+      <div class="delivery-header">
+        <div class="delivery-check">✓</div>
+        <h2>Pagamento Confirmado!</h2>
+        <p>Pedido <strong>${order.id}</strong></p>
+      </div>
+      ${deliveries.map(d => `
+        <div class="delivery-item">
+          <div class="delivery-product">${d.product}</div>
+          ${d.nick ? `
+            <div class="delivery-field">
+              <label>👤 Nick / Usuário</label>
+              <div class="delivery-value">
+                <span id="nick-${d.orderId}">${d.nick}</span>
+                <button class="copy-btn" onclick="copyText('${d.nick}', this)">📋 Copiar</button>
+              </div>
+            </div>
+          ` : ''}
+          <div class="delivery-field">
+            <label>${d.nick ? '🔑 Senha' : '🔑 Chave / Key'}</label>
+            <div class="delivery-value">
+              <span id="pass-${d.orderId}">${d.key}</span>
+              <button class="copy-btn" onclick="copyText('${d.key}', this)">📋 Copiar</button>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+      <div class="delivery-warning">
+        ⚠️ Salve essas informações agora! Elas não serão exibidas novamente.
+      </div>
+    `;
+
+    modal.classList.add('open');
+    showNotification('🎉 Compra realizada com sucesso!', 'success');
+  },
+
+  closeDelivery() {
+    document.getElementById('delivery-modal').classList.remove('open');
+    document.getElementById('checkout-name').value = '';
+    document.getElementById('checkout-email').value = '';
+    document.querySelectorAll('.payment-method').forEach(el => el.classList.remove('selected'));
+    const btn = document.getElementById('checkout-btn');
+    if (btn) { btn.innerHTML = '🔒 Finalizar Compra'; btn.disabled = false; }
+  }
+};
+
+// ─── Helpers ─────────────────────────────────────────────────
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✅ Copiado!';
+    btn.style.background = '#00e676';
+    btn.style.color = '#000';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 2000);
+  });
+}
+
+function showNotification(message, type = 'success') {
+  const container = document.getElementById('notifications');
+  if (!container) return;
+  const n = document.createElement('div');
+  n.className = `notification notification-${type}`;
+  n.innerHTML = message;
+  container.appendChild(n);
+  setTimeout(() => n.classList.add('show'), 10);
+  setTimeout(() => { n.classList.remove('show'); setTimeout(() => n.remove(), 400); }, 3500);
+}
