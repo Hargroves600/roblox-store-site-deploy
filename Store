@@ -65,7 +65,6 @@ const Cart = {
     const list = document.getElementById('cart-items-list');
     const total = document.getElementById('cart-total');
     if (!list) return;
-
     if (this.items.length === 0) {
       list.innerHTML = `<div class="cart-empty"><div class="cart-empty-icon">🛒</div><p>Seu carrinho está vazio</p></div>`;
     } else {
@@ -107,6 +106,8 @@ const Checkout = {
 
   close() {
     document.getElementById('checkout-modal').classList.remove('open');
+    const box = document.getElementById('pix-info-box');
+    if (box) box.remove();
   },
 
   renderSummary() {
@@ -124,46 +125,95 @@ const Checkout = {
     </div>`;
   },
 
+  // ── Exibe/esconde bloco Pix ao selecionar método ──────────
+  showPixInfo(show) {
+    const existing = document.getElementById('pix-info-box');
+    if (!show) { if (existing) existing.remove(); return; }
+    if (existing) return;
+
+    const cfg      = DB.getConfig();
+    const pixKey   = cfg.pixKey  || '(não configurado)';
+    const pixName  = cfg.pixName || '—';
+    const pixBank  = cfg.pixBank || '—';
+    const total    = Cart.getTotal().toFixed(2);
+
+    const box = document.createElement('div');
+    box.id = 'pix-info-box';
+    box.style.cssText = 'animation:fadeUp 0.3s ease both';
+    box.innerHTML = `
+      <div style="
+        background:rgba(0,230,118,0.07);
+        border:1px solid rgba(0,230,118,0.3);
+        border-radius:10px;
+        padding:16px;
+        margin-top:16px;
+      ">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <span style="font-size:24px">💠</span>
+          <div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#00e676">Pague via Pix</div>
+            <div style="font-size:11px;color:var(--text-muted)">Copie a chave, pague e clique em Finalizar</div>
+          </div>
+        </div>
+        <div style="display:grid;gap:8px">
+          <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">🔑 Chave Pix</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <span style="font-family:monospace;font-size:14px;color:#fff;word-break:break-all">${pixKey}</span>
+              <button class="copy-btn" onclick="copyText('${pixKey}',this)" style="flex-shrink:0">📋 Copiar</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+              <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">👤 Titular</div>
+              <div style="font-size:13px;font-weight:600">${pixName}</div>
+            </div>
+            <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+              <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">🏦 Banco</div>
+              <div style="font-size:13px;font-weight:600">${pixBank}</div>
+            </div>
+          </div>
+          <div style="background:rgba(255,171,64,0.08);border:1px solid rgba(255,171,64,0.25);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--warning);line-height:1.6">
+            ⚠️ Transfira exatamente <strong style="font-size:15px">R$ ${total}</strong><br>
+            Após pagar clique em <strong>Finalizar Compra</strong> abaixo para receber seu produto.
+          </div>
+        </div>
+      </div>
+    `;
+
+    const methods = document.querySelector('.payment-methods');
+    if (methods) methods.insertAdjacentElement('afterend', box);
+  },
+
   async process() {
-    const name = document.getElementById('checkout-name')?.value?.trim();
-    const email = document.getElementById('checkout-email')?.value?.trim();
+    const name    = document.getElementById('checkout-name')?.value?.trim();
+    const email   = document.getElementById('checkout-email')?.value?.trim();
     const payment = document.querySelector('.payment-method.selected')?.dataset?.method;
 
     if (!name || !email) { showNotification('⚠️ Preencha todos os campos!', 'warning'); return; }
-    if (!payment) { showNotification('⚠️ Selecione um método de pagamento!', 'warning'); return; }
+    if (!payment)         { showNotification('⚠️ Selecione um método de pagamento!', 'warning'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showNotification('⚠️ Email inválido!', 'warning'); return; }
 
     const btn = document.getElementById('checkout-btn');
     btn.innerHTML = '<span class="loading-spinner"></span> Processando...';
     btn.disabled = true;
 
-    // Simulate payment processing
     await new Promise(r => setTimeout(r, 2000));
 
-    // Deliver products
     const deliveries = [];
     for (const cartItem of Cart.items) {
       const account = DB.getAvailableAccount(cartItem.productId);
       if (account) {
         const orderId = 'ORD-' + Date.now();
         DB.markAccountSold(account.id, orderId);
-        deliveries.push({
-          product: cartItem.name,
-          nick: account.nick,
-          key: account.password,
-          orderId
-        });
+        deliveries.push({ product: cartItem.name, nick: account.nick, key: account.password, orderId });
       }
     }
 
-    // Create order record
     const order = DB.createOrder({
-      customerName: name,
-      customerEmail: email,
-      paymentMethod: payment,
-      items: Cart.items,
-      total: Cart.getTotal(),
-      deliveries
+      customerName: name, customerEmail: email,
+      paymentMethod: payment, items: Cart.items,
+      total: Cart.getTotal(), deliveries
     });
 
     this.currentOrder = { order, deliveries };
@@ -173,7 +223,7 @@ const Checkout = {
   },
 
   showDelivery(deliveries, order) {
-    const modal = document.getElementById('delivery-modal');
+    const modal   = document.getElementById('delivery-modal');
     const content = document.getElementById('delivery-content');
     if (!modal || !content) return;
 
@@ -190,16 +240,15 @@ const Checkout = {
             <div class="delivery-field">
               <label>👤 Nick / Usuário</label>
               <div class="delivery-value">
-                <span id="nick-${d.orderId}">${d.nick}</span>
-                <button class="copy-btn" onclick="copyText('${d.nick}', this)">📋 Copiar</button>
+                <span>${d.nick}</span>
+                <button class="copy-btn" onclick="copyText('${d.nick}',this)">📋 Copiar</button>
               </div>
-            </div>
-          ` : ''}
+            </div>` : ''}
           <div class="delivery-field">
             <label>${d.nick ? '🔑 Senha' : '🔑 Chave / Key'}</label>
             <div class="delivery-value">
-              <span id="pass-${d.orderId}">${d.key}</span>
-              <button class="copy-btn" onclick="copyText('${d.key}', this)">📋 Copiar</button>
+              <span>${d.key}</span>
+              <button class="copy-btn" onclick="copyText('${d.key}',this)">📋 Copiar</button>
             </div>
           </div>
         </div>
@@ -215,7 +264,7 @@ const Checkout = {
 
   closeDelivery() {
     document.getElementById('delivery-modal').classList.remove('open');
-    document.getElementById('checkout-name').value = '';
+    document.getElementById('checkout-name').value  = '';
     document.getElementById('checkout-email').value = '';
     document.querySelectorAll('.payment-method').forEach(el => el.classList.remove('selected'));
     const btn = document.getElementById('checkout-btn');
