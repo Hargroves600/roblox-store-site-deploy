@@ -1,0 +1,209 @@
+// ============================================================
+// DATABASE.JS - Simulated database using localStorage
+// In production: replace with MongoDB/Firebase API calls
+// ============================================================
+
+const DB = {
+  // ─── Initialize default data ────────────────────────────
+  init() {
+    if (!localStorage.getItem('rbx_initialized')) {
+      localStorage.setItem('rbx_products', JSON.stringify(DEFAULT_PRODUCTS));
+      localStorage.setItem('rbx_accounts', JSON.stringify(DEFAULT_ACCOUNTS));
+      localStorage.setItem('rbx_orders', JSON.stringify([]));
+      localStorage.setItem('rbx_reviews', JSON.stringify(DEFAULT_REVIEWS));
+      localStorage.setItem('rbx_site_config', JSON.stringify(DEFAULT_CONFIG));
+      localStorage.setItem('rbx_initialized', 'true');
+    }
+  },
+
+  // ─── Products ────────────────────────────────────────────
+  getProducts() {
+    return JSON.parse(localStorage.getItem('rbx_products') || '[]');
+  },
+  getProduct(id) {
+    return this.getProducts().find(p => p.id === id);
+  },
+  saveProducts(products) {
+    localStorage.setItem('rbx_products', JSON.stringify(products));
+  },
+  addProduct(product) {
+    const products = this.getProducts();
+    product.id = 'prod_' + Date.now();
+    product.createdAt = new Date().toISOString();
+    products.push(product);
+    this.saveProducts(products);
+    return product;
+  },
+  updateProduct(id, data) {
+    const products = this.getProducts();
+    const idx = products.findIndex(p => p.id === id);
+    if (idx !== -1) { products[idx] = { ...products[idx], ...data }; this.saveProducts(products); }
+  },
+  deleteProduct(id) {
+    this.saveProducts(this.getProducts().filter(p => p.id !== id));
+  },
+
+  // ─── Accounts (delivery stock) ───────────────────────────
+  getAccounts() {
+    return JSON.parse(localStorage.getItem('rbx_accounts') || '[]');
+  },
+  getAvailableAccount(productId) {
+    return this.getAccounts().find(a => a.productId === productId && !a.sold);
+  },
+  markAccountSold(accountId, orderId) {
+    const accounts = this.getAccounts();
+    const idx = accounts.findIndex(a => a.id === accountId);
+    if (idx !== -1) { accounts[idx].sold = true; accounts[idx].orderId = orderId; localStorage.setItem('rbx_accounts', JSON.stringify(accounts)); }
+  },
+  addAccount(account) {
+    const accounts = this.getAccounts();
+    account.id = 'acc_' + Date.now() + Math.random().toString(36).slice(2,6);
+    account.sold = false;
+    account.createdAt = new Date().toISOString();
+    accounts.push(account);
+    localStorage.setItem('rbx_accounts', JSON.stringify(accounts));
+    return account;
+  },
+  deleteAccount(id) {
+    const accounts = this.getAccounts().filter(a => a.id !== id);
+    localStorage.setItem('rbx_accounts', JSON.stringify(accounts));
+  },
+  getStockCount(productId) {
+    return this.getAccounts().filter(a => a.productId === productId && !a.sold).length;
+  },
+
+  // ─── Orders ──────────────────────────────────────────────
+  getOrders() {
+    return JSON.parse(localStorage.getItem('rbx_orders') || '[]');
+  },
+  createOrder(orderData) {
+    const orders = this.getOrders();
+    const order = {
+      id: 'ORD-' + Date.now(),
+      ...orderData,
+      status: 'completed',
+      createdAt: new Date().toISOString()
+    };
+    orders.unshift(order);
+    localStorage.setItem('rbx_orders', JSON.stringify(orders));
+    return order;
+  },
+
+  // ─── Reviews ─────────────────────────────────────────────
+  getReviews(productId) {
+    const all = JSON.parse(localStorage.getItem('rbx_reviews') || '[]');
+    return productId ? all.filter(r => r.productId === productId) : all;
+  },
+  addReview(review) {
+    const reviews = JSON.parse(localStorage.getItem('rbx_reviews') || '[]');
+    review.id = 'rev_' + Date.now();
+    review.createdAt = new Date().toISOString();
+    reviews.unshift(review);
+    localStorage.setItem('rbx_reviews', JSON.stringify(reviews));
+    return review;
+  },
+  getAverageRating(productId) {
+    const reviews = this.getReviews(productId);
+    if (!reviews.length) return 0;
+    return reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+  },
+
+  // ─── Config ──────────────────────────────────────────────
+  getConfig() {
+    return JSON.parse(localStorage.getItem('rbx_site_config') || '{}');
+  },
+  saveConfig(config) {
+    localStorage.setItem('rbx_site_config', JSON.stringify(config));
+  }
+};
+
+// ─── Default Data ────────────────────────────────────────────
+const DEFAULT_CONFIG = {
+  siteName: 'RobloxStore',
+  bannerTitle: 'O Melhor Marketplace de Contas Roblox',
+  bannerSubtitle: 'Contas premium, scripts exclusivos e muito mais. Entrega automática e instantânea!',
+  announcement: '🔥 PROMOÇÃO: Use o cupom STORE10 e ganhe 10% de desconto na primeira compra!'
+};
+
+const DEFAULT_PRODUCTS = [
+  {
+    id: 'prod_001', category: 'contas', name: 'Conta Roblox Starter', price: 12.90,
+    originalPrice: 19.90, image: '🎮', badge: 'POPULAR',
+    description: 'Conta Roblox com nível médio, alguns itens básicos e histórico limpo. Ideal para quem quer começar do zero com vantagem.',
+    features: ['Conta verificada', 'Email incluso', 'Entrega imediata', 'Suporte 24h'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'prod_002', category: 'contas', name: 'Conta Roblox Premium', price: 29.90,
+    originalPrice: 49.90, image: '⭐', badge: 'DESTAQUE',
+    description: 'Conta Roblox Premium com assinatura ativa, Robux e itens raros. Perfeita para jogadores experientes.',
+    features: ['Premium ativo', 'Robux bônus', 'Itens limitados', 'Conta antiga'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'prod_003', category: 'contas', name: 'Conta Roblox OG', price: 79.90,
+    originalPrice: 129.90, image: '👑', badge: 'RARO',
+    description: 'Conta OG criada antes de 2015 com username único e itens raríssimos que não existem mais no jogo.',
+    features: ['Conta OG 2015+', 'Username único', 'Itens raros', 'Alta valorização'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'prod_004', category: 'scripts', name: 'Script ESP Universal', price: 9.90,
+    originalPrice: null, image: '🔧', badge: null,
+    description: 'Script ESP compatível com a maioria dos jogos Roblox. Veja jogadores através de paredes e obtenha vantagem competitiva.',
+    features: ['Multi-jogo', 'Undetected', 'Atualizações grátis', 'Suporte'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'prod_005', category: 'scripts', name: 'Script AimBot Premium', price: 19.90,
+    originalPrice: 34.90, image: '🎯', badge: 'NOVO',
+    description: 'AimBot avançado com suavização de mira, prediction e múltiplos modos. Funciona nos principais jogos FPS do Roblox.',
+    features: ['Smoothing avançado', 'FOV ajustável', 'Prediction', 'Anti-detecção'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'prod_006', category: 'gamepasses', name: 'Gamepass Blox Fruits x10', price: 24.90,
+    originalPrice: 39.90, image: '🍎', badge: 'QUEENTE',
+    description: 'Pacote de 10 Gamepasses para Blox Fruits incluindo 2x de EXP, acesso ao Sea 3 e itens exclusivos do servidor.',
+    features: ['10 gamepasses', '2x EXP', 'Sea 3 access', 'Itens exclusivos'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'prod_007', category: 'gamepasses', name: 'Gamepass Adopt Me Premium', price: 14.90,
+    originalPrice: null, image: '🐾', badge: null,
+    description: 'Gamepass VIP do Adopt Me com casa exclusiva, pet premium e benefícios especiais no servidor.',
+    features: ['Casa VIP', 'Pet exclusivo', 'Badges especiais', 'Chat tag'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'prod_008', category: 'outros', name: 'Robux 800 (Entrega Direta)', price: 18.90,
+    originalPrice: 24.90, image: '💎', badge: 'MAIS VENDIDO',
+    description: '800 Robux entregues diretamente na sua conta via gamepass. Processo seguro e sem risco de ban.',
+    features: ['Entrega segura', 'Via gamepass', 'Anti-ban', 'Rápido'],
+    createdAt: new Date().toISOString()
+  }
+];
+
+const DEFAULT_ACCOUNTS = [
+  { id: 'acc_001', productId: 'prod_001', nick: 'PlayerXBR2019', password: 'Rblx@2019#Secure', sold: false, createdAt: new Date().toISOString() },
+  { id: 'acc_002', productId: 'prod_001', nick: 'GamerBrazil99', password: 'Pass#Brazil99!', sold: false, createdAt: new Date().toISOString() },
+  { id: 'acc_003', productId: 'prod_001', nick: 'RobloxKid2020', password: 'Kid2020@Safe!', sold: false, createdAt: new Date().toISOString() },
+  { id: 'acc_004', productId: 'prod_002', nick: 'PremiumHunter_BR', password: 'Prem!umH4nt3r', sold: false, createdAt: new Date().toISOString() },
+  { id: 'acc_005', productId: 'prod_002', nick: 'StarPlayer2021', password: 'St4r@Player21', sold: false, createdAt: new Date().toISOString() },
+  { id: 'acc_006', productId: 'prod_003', nick: 'OGPlayer2014', password: '0GPlay3r@2014!', sold: false, createdAt: new Date().toISOString() },
+  { id: 'acc_007', productId: 'prod_004', nick: null, password: 'ESP_SCRIPT_KEY_7X92K', sold: false, createdAt: new Date().toISOString() },
+  { id: 'acc_008', productId: 'prod_005', nick: null, password: 'AIM_PREMIUM_KEY_4M8NQ', sold: false, createdAt: new Date().toISOString() },
+  { id: 'acc_009', productId: 'prod_006', nick: null, password: 'GP_BLOX_KEY_9R3WL', sold: false, createdAt: new Date().toISOString() },
+  { id: 'acc_010', productId: 'prod_007', nick: null, password: 'GP_ADOPT_KEY_2K7PX', sold: false, createdAt: new Date().toISOString() },
+  { id: 'acc_011', productId: 'prod_008', nick: null, password: 'ROBUX_800_CODE_5T1VY', sold: false, createdAt: new Date().toISOString() }
+];
+
+const DEFAULT_REVIEWS = [
+  { id: 'rev_001', productId: 'prod_001', author: 'Lucas_BR', rating: 5, comment: 'Conta chegou rapidinho, exatamente como descrito. Recomendo demais!', createdAt: '2024-10-15T10:00:00Z' },
+  { id: 'rev_002', productId: 'prod_001', author: 'Joao_Gamer', rating: 4, comment: 'Boa conta, entrega rápida. Só achei um pouco cara mas vale.', createdAt: '2024-10-12T14:30:00Z' },
+  { id: 'rev_003', productId: 'prod_002', author: 'Marina99', rating: 5, comment: 'Conta premium incrível! Muitos itens raros. Suporte tirou dúvidas rápido.', createdAt: '2024-10-18T09:15:00Z' },
+  { id: 'rev_004', productId: 'prod_003', author: 'ProPlayer_RBX', rating: 5, comment: 'Conta OG demais! Username original, itens que não existem mais. Vale cada centavo!', createdAt: '2024-10-20T16:45:00Z' },
+  { id: 'rev_005', productId: 'prod_004', author: 'HackerBR_2024', rating: 4, comment: 'Script funcionando bem, mas precisou de atualização rápida após patch do Roblox.', createdAt: '2024-10-08T11:20:00Z' },
+  { id: 'rev_006', productId: 'prod_006', author: 'BloxFruitsKing', rating: 5, comment: 'Os gamepasses são reais! 2x EXP mudou meu jogo. Entrega instantânea!', createdAt: '2024-10-22T20:00:00Z' },
+  { id: 'rev_007', productId: 'prod_008', author: 'RobuxNeedy', rating: 5, comment: 'Os Robux chegaram em menos de 5 minutos. Processo super seguro!', createdAt: '2024-10-25T13:10:00Z' }
+];
