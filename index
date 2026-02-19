@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RobloxStore — Marketplace Premium de Roblox</title>
+  <meta name="description" content="O melhor marketplace de contas, scripts e itens Roblox do Brasil. Entrega automática e segura.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ─── Page Loader ──────────────────────────────────────── -->
+<div class="page-loader" id="page-loader">
+  <div class="loader-logo">Roblox<span>Store</span></div>
+  <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+</div>
+
+<!-- ─── Notifications ────────────────────────────────────── -->
+<div id="notifications"></div>
+
+<!-- ─── Announcement Bar ─────────────────────────────────── -->
+<div class="announcement-bar" id="announcement-bar">
+  🔥 PROMOÇÃO: Use o cupom STORE10 e ganhe 10% de desconto na primeira compra!
+</div>
+
+<!-- ─── Navbar ───────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <div class="logo-icon">🎮</div>
+      Roblox<span>Store</span>
+    </a>
+
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#" class="active" onclick="filterCategory('all')">Início</a></li>
+      <li><a href="#" onclick="filterCategory('contas')">Contas</a></li>
+      <li><a href="#" onclick="filterCategory('scripts')">Scripts</a></li>
+      <li><a href="#" onclick="filterCategory('gamepasses')">Gamepasses</a></li>
+      <li><a href="#" onclick="filterCategory('outros')">Outros</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <div class="search-bar">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--text-muted)">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" placeholder="Buscar produto..." id="search-input" oninput="handleSearch(this.value)">
+      </div>
+
+      <button class="cart-btn" onclick="Cart.toggle()">
+        🛒
+        <span class="cart-count" id="cart-count" style="display:none">0</span>
+      </button>
+
+      <button class="admin-btn" onclick="window.location.href='admin.html'">⚙ Admin</button>
+
+      <button class="hamburger" id="hamburger" onclick="toggleMobileMenu()">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── Cart Panel ────────────────────────────────────────── -->
+<div class="cart-overlay" id="cart-overlay" onclick="Cart.close()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-header">
+    <span class="cart-title">🛒 Carrinho</span>
+    <button class="cart-close" onclick="Cart.close()">✕</button>
+  </div>
+  <div id="cart-items-list"></div>
+  <div class="cart-footer">
+    <div class="cart-total-row">
+      <span class="cart-total-label">Total</span>
+      <span class="cart-total-value" id="cart-total">R$ 0,00</span>
+    </div>
+    <button class="btn-checkout" onclick="Checkout.open()">🔒 Finalizar Compra</button>
+  </div>
+</div>
+
+<!-- ─── Hero ──────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="container" style="position:relative;z-index:1">
+    <div class="hero-badge">⚡ Entrega 100% Automática</div>
+    <h1 id="hero-title">O Melhor <span class="highlight">Marketplace</span><br>de Roblox do Brasil</h1>
+    <p id="hero-subtitle">Contas premium, scripts exclusivos e muito mais. Entrega automática e instantânea após o pagamento!</p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="document.getElementById('products-section').scrollIntoView({behavior:'smooth'})">
+        🛍 Ver Produtos
+      </button>
+      <button class="btn-secondary" onclick="filterCategory('contas')">
+        👑 Contas Premium
+      </button>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num" id="stat-products">0<span>+</span></div>
+        <div class="hero-stat-label">Produtos</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">4.9<span>★</span></div>
+        <div class="hero-stat-label">Avaliação Média</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">24<span>h</span></div>
+        <div class="hero-stat-label">Suporte</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">1k<span>+</span></div>
+        <div class="hero-stat-label">Clientes</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Features Bar ──────────────────────────────────────── -->
+<div class="features-bar">
+  <div class="container">
+    <div class="features-grid">
+      <div class="feature-item">
+        <div class="feature-icon">⚡</div>
+        <div>
+          <div class="feature-text-title">Entrega Instantânea</div>
+          <div class="feature-text-sub">Receba automaticamente após pagar</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">🔒</div>
+        <div>
+          <div class="feature-text-title">Pagamento Seguro</div>
+          <div class="feature-text-sub">Pix, cartão e boleto</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">💬</div>
+        <div>
+          <div class="feature-text-title">Suporte 24/7</div>
+          <div class="feature-text-sub">Atendimento pelo Discord</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">✅</div>
+        <div>
+          <div class="feature-text-title">Contas Verificadas</div>
+          <div class="feature-text-sub">100% testadas antes da venda</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Categories ────────────────────────────────────────── -->
+<section class="categories-section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Categorias</h2>
+    </div>
+    <div class="categories-grid">
+      <button class="category-btn active" onclick="filterCategory('all')" data-cat="all">🎮 Todos</button>
+      <button class="category-btn" onclick="filterCategory('contas')" data-cat="contas">👤 Contas</button>
+      <button class="category-btn" onclick="filterCategory('scripts')" data-cat="scripts">🔧 Scripts</button>
+      <button class="category-btn" onclick="filterCategory('gamepasses')" data-cat="gamepasses">🎫 Gamepasses</button>
+      <button class="category-btn" onclick="filterCategory('outros')" data-cat="outros">💎 Outros</button>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Products ──────────────────────────────────────────── -->
+<section class="products-section" id="products-section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title" id="products-title">Todos os Produtos</h2>
+      <span class="section-link" id="products-count"></span>
+    </div>
+    <div class="products-grid" id="products-grid">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ─── Footer ────────────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="nav-logo" style="margin-bottom:10px">
+          <div class="logo-icon" style="width:28px;height:28px;font-size:14px">🎮</div>
+          Roblox<span style="color:var(--accent)">Store</span>
+        </div>
+        <p>O marketplace mais confiável de produtos digitais para Roblox do Brasil. Entrega automática, suporte 24h e preços competitivos.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Produtos</h4>
+        <ul>
+          <li><a href="#" onclick="filterCategory('contas')">Contas Roblox</a></li>
+          <li><a href="#" onclick="filterCategory('scripts')">Scripts</a></li>
+          <li><a href="#" onclick="filterCategory('gamepasses')">Gamepasses</a></li>
+          <li><a href="#" onclick="filterCategory('outros')">Outros</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Suporte</h4>
+        <ul>
+          <li><a href="#">Discord</a></li>
+          <li><a href="#">FAQ</a></li>
+          <li><a href="#">Termos de Uso</a></li>
+          <li><a href="#">Política de Privacidade</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2024 RobloxStore. Todos os direitos reservados.</span>
+      <span>Feito com ❤️ para a comunidade Roblox BR</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ─── Checkout Modal ────────────────────────────────────── -->
+<div class="modal-overlay" id="checkout-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">🔒 Checkout</span>
+      <button class="modal-close" onclick="Checkout.close()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="checkout-summary" style="margin-bottom:20px"></div>
+      <div class="form-group">
+        <label class="form-label">Seu Nome</label>
+        <input type="text" class="form-input" id="checkout-name" placeholder="Nome completo">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Seu Email</label>
+        <input type="email" class="form-input" id="checkout-email" placeholder="seu@email.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Método de Pagamento</label>
+        <div class="payment-methods">
+          <div class="payment-method" data-method="pix" onclick="selectPayment(this)">
+            <span class="pm-icon">💠</span>
+            Pix
+          </div>
+          <div class="payment-method" data-method="cartao" onclick="selectPayment(this)">
+            <span class="pm-icon">💳</span>
+            Cartão
+          </div>
+          <div class="payment-method" data-method="boleto" onclick="selectPayment(this)">
+            <span class="pm-icon">📄</span>
+            Boleto
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary" id="checkout-btn" onclick="Checkout.process()" style="width:100%;justify-content:center;margin-top:8px">
+        🔒 Finalizar Compra
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Delivery Modal ────────────────────────────────────── -->
+<div class="modal-overlay" id="delivery-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">📦 Entrega do Pedido</span>
+      <button class="modal-close" onclick="Checkout.closeDelivery()">✕</button>
+    </div>
+    <div class="modal-body" id="delivery-content"></div>
+    <div style="padding:16px 24px;border-top:1px solid var(--border)">
+      <button class="btn-primary" onclick="Checkout.closeDelivery()" style="width:100%;justify-content:center">
+        ✅ Concluído
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Product Detail Modal ──────────────────────────────── -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal product-modal">
+    <div class="product-modal-img" id="pm-img"></div>
+    <div class="product-modal-body">
+      <h2 class="product-modal-title" id="pm-name"></h2>
+      <div id="pm-stars" class="product-stars" style="margin-bottom:12px"></div>
+      <p id="pm-desc" style="color:var(--text-secondary);font-size:14px;margin-bottom:16px"></p>
+      <div class="product-features" id="pm-features"></div>
+      <!-- Reviews -->
+      <div class="reviews-section">
+        <div class="reviews-title">⭐ Avaliações</div>
+        <div class="reviews-list" id="pm-reviews"></div>
+        <div class="add-review-form">
+          <h4>Deixe sua avaliação</h4>
+          <div class="star-rating" id="review-stars">
+            <span class="star" data-val="1" onclick="selectStar(1)">★</span>
+            <span class="star" data-val="2" onclick="selectStar(2)">★</span>
+            <span class="star" data-val="3" onclick="selectStar(3)">★</span>
+            <span class="star" data-val="4" onclick="selectStar(4)">★</span>
+            <span class="star" data-val="5" onclick="selectStar(5)">★</span>
+          </div>
+          <input type="text" class="form-input" id="review-author" placeholder="Seu nick/nome" style="margin-bottom:8px">
+          <textarea class="form-input" id="review-comment" placeholder="Comente sobre o produto..." style="height:80px;resize:none;margin-bottom:10px"></textarea>
+          <button class="btn-primary" onclick="submitReview()" style="font-size:13px;padding:10px 20px">Enviar Avaliação</button>
+        </div>
+      </div>
+    </div>
+    <div class="product-modal-footer">
+      <div class="product-price">
+        <span class="price-current" id="pm-price"></span>
+        <span class="price-original" id="pm-original"></span>
+      </div>
+      <button class="btn-primary" id="pm-add-btn" onclick="addCurrentToCart()">🛒 Adicionar ao Carrinho</button>
+    </div>
+    <button class="modal-close" onclick="closeProductModal()" style="position:absolute;top:14px;right:14px;z-index:10">✕</button>
+  </div>
+</div>
+
+<!-- ─── Scripts ───────────────────────────────────────────── -->
+<script src="js/database.js"></script>
+<script src="js/store.js"></script>
+<script>
+  let currentProductId = null;
+  let currentReviewRating = 0;
+  let currentCategory = 'all';
+  let currentSearch = '';
+
+  // ─── Init ─────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    DB.init();
+    Cart.load();
+    Cart.updateUI();
+    renderProducts();
+    updateHeroFromConfig();
+    animateCounter('stat-products', DB.getProducts().length);
+
+    // Hide loader
+    setTimeout(() => {
+      document.getElementById('page-loader').classList.add('hidden');
+    }, 1400);
+  });
+
+  // ─── Config ───────────────────────────────────────────────
+  function updateHeroFromConfig() {
+    const config = DB.getConfig();
+    if (config.siteName) document.title = config.siteName + ' — Marketplace Premium de Roblox';
+    if (config.bannerTitle) document.getElementById('hero-title').innerHTML = config.bannerTitle.replace('Marketplace', '<span class="highlight">Marketplace</span>');
+    if (config.bannerSubtitle) document.getElementById('hero-subtitle').textContent = config.bannerSubtitle;
+    if (config.announcement) document.getElementById('announcement-bar').textContent = config.announcement;
+  }
+
+  // ─── Counter animation ────────────────────────────────────
+  function animateCounter(id, target) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let current = 0;
+    const step = Math.ceil(target / 30);
+    const timer = setInterval(() => {
+      current = Math.min(current + step, target);
+      el.innerHTML = current + '<span>+</span>';
+      if (current >= target) clearInterval(timer);
+    }, 40);
+  }
+
+  // ─── Products Render ──────────────────────────────────────
+  function renderProducts() {
+    const grid = document.getElementById('products-grid');
+    let products = DB.getProducts();
+
+    if (currentCategory !== 'all') products = products.filter(p => p.category === currentCategory);
+    if (currentSearch) {
+      const q = currentSearch.toLowerCase();
+      products = products.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q));
+    }
+
+    document.getElementById('products-count').textContent = `${products.length} produto${products.length !== 1 ? 's' : ''}`;
+
+    if (products.length === 0) {
+      grid.innerHTML = `<div class="no-results"><div class="no-results-icon">🔍</div><p>Nenhum produto encontrado</p></div>`;
+      return;
+    }
+
+    grid.innerHTML = products.map((p, i) => {
+      const stock = DB.getStockCount(p.id);
+      const avg = DB.getAverageRating(p.id);
+      const reviewCount = DB.getReviews(p.id).length;
+      const stars = renderStarsHtml(avg);
+      return `
+        <div class="product-card" onclick="openProductModal('${p.id}')" style="animation-delay:${i * 0.05}s">
+          <div class="product-card-image">
+            ${p.badge ? `<span class="product-badge">${p.badge}</span>` : ''}
+            <span class="product-stock ${stock > 0 ? 'in-stock' : 'out-stock'}">
+              ${stock > 0 ? `✓ ${stock} disponível` : '✗ Esgotado'}
+            </span>
+            ${p.image}
+          </div>
+          <div class="product-card-body">
+            <div class="product-name">${p.name}</div>
+            <div class="product-stars">
+              <span class="stars">${stars}</span>
+              <span class="stars-count">${avg > 0 ? avg.toFixed(1) : '—'} (${reviewCount})</span>
+            </div>
+            <p class="product-desc">${p.description}</p>
+            <div class="product-footer">
+              <div class="product-price">
+                <span class="price-current">R$ ${p.price.toFixed(2)}</span>
+                ${p.originalPrice ? `<span class="price-original">R$ ${p.originalPrice.toFixed(2)}</span>` : ''}
+              </div>
+              <button class="btn-add-cart" onclick="event.stopPropagation(); Cart.add('${p.id}')" ${stock === 0 ? 'disabled' : ''}>
+                ${stock > 0 ? '🛒 Comprar' : 'Esgotado'}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ─── Stars HTML ───────────────────────────────────────────
+  function renderStarsHtml(avg) {
+    let html = '';
+    for (let i = 1; i <= 5; i++) html += avg >= i ? '★' : (avg >= i - 0.5 ? '⯨' : '☆');
+    return html;
+  }
+
+  // ─── Filters ──────────────────────────────────────────────
+  function filterCategory(cat) {
+    currentCategory = cat;
+    document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+    const titles = { all: 'Todos os Produtos', contas: '👤 Contas Roblox', scripts: '🔧 Scripts', gamepasses: '🎫 Gamepasses', outros: '💎 Outros' };
+    document.getElementById('products-title').textContent = titles[cat] || 'Produtos';
+    renderProducts();
+    document.getElementById('products-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function handleSearch(val) {
+    currentSearch = val;
+    renderProducts();
+  }
+
+  // ─── Product Modal ────────────────────────────────────────
+  function openProductModal(productId) {
+    const p = DB.getProduct(productId);
+    if (!p) return;
+    currentProductId = productId;
+    currentReviewRating = 0;
+
+    document.getElementById('pm-img').textContent = p.image;
+    document.getElementById('pm-name').textContent = p.name;
+    document.getElementById('pm-desc').textContent = p.description;
+    document.getElementById('pm-price').textContent = `R$ ${p.price.toFixed(2)}`;
+
+    const orig = document.getElementById('pm-original');
+    orig.textContent = p.originalPrice ? `R$ ${p.originalPrice.toFixed(2)}` : '';
+
+    const avg = DB.getAverageRating(productId);
+    const reviewCount = DB.getReviews(productId).length;
+    document.getElementById('pm-stars').innerHTML = `
+      <span class="stars" style="font-size:16px">${renderStarsHtml(avg)}</span>
+      <span class="stars-count">${avg > 0 ? avg.toFixed(1) : '—'} (${reviewCount} avaliação${reviewCount !== 1 ? 'ões' : 'ão'})</span>
+    `;
+
+    const feats = document.getElementById('pm-features');
+    feats.innerHTML = (p.features || []).map(f => `<span class="feature-tag">✓ ${f}</span>`).join('');
+
+    renderReviews(productId);
+    updateReviewStars(0);
+
+    const stock = DB.getStockCount(productId);
+    const btn = document.getElementById('pm-add-btn');
+    btn.textContent = stock > 0 ? '🛒 Adicionar ao Carrinho' : '✗ Esgotado';
+    btn.disabled = stock === 0;
+
+    document.getElementById('product-modal').classList.add('open');
+  }
+
+  function closeProductModal() {
+    document.getElementById('product-modal').classList.remove('open');
+    currentProductId = null;
+  }
+
+  function addCurrentToCart() {
+    if (currentProductId) Cart.add(currentProductId);
+  }
+
+  // ─── Reviews ──────────────────────────────────────────────
+  function renderReviews(productId) {
+    const reviews = DB.getReviews(productId);
+    const list = document.getElementById('pm-reviews');
+    if (reviews.length === 0) {
+      list.innerHTML = `<p style="color:var(--text-muted);font-size:13px">Seja o primeiro a avaliar!</p>`;
+      return;
+    }
+    list.innerHTML = reviews.map(r => `
+      <div class="review-item">
+        <div class="review-header">
+          <span class="review-author">👤 ${r.author}</span>
+          <span class="review-date">${new Date(r.createdAt).toLocaleDateString('pt-BR')}</span>
+        </div>
+        <div class="review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
+        <p class="review-comment">${r.comment}</p>
+      </div>
+    `).join('');
+  }
+
+  function selectStar(val) {
+    currentReviewRating = val;
+    updateReviewStars(val);
+  }
+
+  function updateReviewStars(val) {
+    document.querySelectorAll('#review-stars .star').forEach((s, i) => {
+      s.classList.toggle('active', i < val);
+    });
+  }
+
+  function submitReview() {
+    const author = document.getElementById('review-author').value.trim();
+    const comment = document.getElementById('review-comment').value.trim();
+    if (!author || !comment) { showNotification('⚠️ Preencha todos os campos!', 'warning'); return; }
+    if (currentReviewRating === 0) { showNotification('⚠️ Selecione uma nota!', 'warning'); return; }
+    DB.addReview({ productId: currentProductId, author, comment, rating: currentReviewRating });
+    document.getElementById('review-author').value = '';
+    document.getElementById('review-comment').value = '';
+    currentReviewRating = 0;
+    updateReviewStars(0);
+    renderReviews(currentProductId);
+    renderProducts();
+    showNotification('✅ Avaliação enviada!', 'success');
+  }
+
+  // ─── Payment selection ────────────────────────────────────
+  function selectPayment(el) {
+    document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  // ─── Mobile menu ──────────────────────────────────────────
+  function toggleMobileMenu() {
+    document.getElementById('nav-links').classList.toggle('open');
+  }
+
+  // ─── Close modals on overlay click ────────────────────────
+  document.getElementById('checkout-modal').addEventListener('click', function(e) {
+    if (e.target === this) Checkout.close();
+  });
+  document.getElementById('delivery-modal').addEventListener('click', function(e) {
+    if (e.target === this) Checkout.closeDelivery();
+  });
+  document.getElementById('product-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeProductModal();
+  });
+</script>
+</body>
+</html>
