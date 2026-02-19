@@ -122,7 +122,10 @@ const DEFAULT_CONFIG = {
   siteName: 'RobloxStore',
   bannerTitle: 'O Melhor Marketplace de Contas Roblox',
   bannerSubtitle: 'Contas premium, scripts exclusivos e muito mais. Entrega automática e instantânea!',
-  announcement: '🔥 PROMOÇÃO: Use o cupom STORE10 e ganhe 10% de desconto na primeira compra!'
+  announcement: '🔥 PROMOÇÃO: Use o cupom STORE10 e ganhe 10% de desconto na primeira compra!',
+  pixKey: '',       // Chave Pix do site (CPF, email, telefone ou chave aleatória)
+  pixName: '',      // Nome do titular da conta Pix
+  pixBank: ''       // Banco (ex: Nubank, Inter, etc.)
 };
 
 const DEFAULT_PRODUCTS = [
