@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — RobloxStore</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <!-- EmailJS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+  <style>
+    .login-steps {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+    .login-step {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .login-step.active { color: var(--accent); }
+    .login-step.done   { color: var(--success); }
+    .step-dot {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0;
+      transition: all 0.3s;
+    }
+    .login-step.done .step-dot   { background: var(--success); border-color: var(--success); color: #000; }
+    .login-step.active .step-dot { background: var(--accent);  border-color: var(--accent);  color: #fff; }
+    .step-line { width: 36px; height: 1px; background: var(--border); }
+
+    .login-panel { display: none; animation: fadeSlideIn 0.3s ease; }
+    .login-panel.active { display: block; }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .code-inputs {
+      display: flex; gap: 10px; justify-content: center; margin: 20px 0;
+    }
+    .code-input {
+      width: 48px; height: 58px;
+      text-align: center;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 26px; font-weight: 700;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      outline: none;
+      transition: all 0.2s;
+      caret-color: var(--accent);
+    }
+    .code-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); background: rgba(255,60,60,0.05); }
+    .code-input.filled { border-color: var(--accent); color: var(--accent); }
+    .code-input.error  { border-color: var(--error); animation: shake 0.4s; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%,60%  { transform: translateX(-6px); }
+      40%,80%  { transform: translateX(6px); }
+    }
+
+    .sending-row {
+      display: flex; align-items: center; gap: 10px; justify-content: center;
+      background: var(--surface); border-radius: 8px; padding: 12px;
+      font-size: 13px; color: var(--text-muted); margin-bottom: 16px;
+    }
+    .code-timer { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+    .code-timer span { color: var(--accent); font-weight: 700; }
+    .resend-btn {
+      background: none; border: none; color: var(--accent);
+      font-size: 12px; cursor: pointer; font-family: 'Exo 2', sans-serif;
+      text-decoration: underline; display: block; margin: 8px auto 0;
+    }
+    .resend-btn:disabled { color: var(--text-muted); cursor: not-allowed; text-decoration: none; }
+    .email-chip {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;
+      font-size: 13px; color: var(--text-secondary);
+    }
+    .email-chip strong { color: var(--text-primary); }
+
+    .setup-box {
+      background: rgba(0,212,255,0.06); border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 8px; padding: 14px 16px; font-size: 12px;
+      color: var(--accent2); line-height: 1.7; margin-bottom: 18px;
+    }
+    .setup-box strong { color: #fff; }
+    .setup-box code { background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 3px; font-family: monospace; }
+
+    .setup-steps { list-style: none; counter-reset: s; padding: 0; }
+    .setup-steps li {
+      counter-increment: s;
+      display: flex; gap: 10px; font-size: 12px;
+      color: var(--text-secondary); padding: 6px 0;
+      border-bottom: 1px solid var(--border); line-height: 1.5;
+    }
+    .setup-steps li:last-child { border-bottom: none; }
+    .setup-steps li::before {
+      content: counter(s);
+      background: var(--accent); color: #fff;
+      width: 20px; height: 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="notifications"></div>
+
+<!-- ═══════════════════════════════════════
+     LOGIN — STEP 1: Senha
+═══════════════════════════════════════ -->
+<div id="login-screen" class="admin-login">
+  <div class="login-card" style="max-width:440px">
+
+    <div class="login-header">
+      <div class="login-icon">🔐</div>
+      <h2 class="login-title">Painel Admin</h2>
+      <p class="login-subtitle">Verificação em 2 etapas</p>
+    </div>
+
+    <!-- Step bar -->
+    <div class="login-steps">
+      <div class="login-step active" id="step-ind-1">
+        <div class="step-dot" id="step-dot-1">1</div>
+        <span>Senha</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="login-step" id="step-ind-2">
+        <div class="step-dot" id="step-dot-2">2</div>
+        <span>Código Gmail</span>
+      </div>
+    </div>
+
+    <!-- Panel 1: login -->
+    <div class="login-panel active" id="panel-step1">
+      <div class="form-group">
+        <label class="form-label">Usuário</label>
+        <input type="text" class="form-input" id="login-user" placeholder="admin"
+          onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <input type="password" class="form-input" id="login-pass" placeholder="••••••••"
+          onkeydown="if(event.key==='Enter')checkPassword()">
+      </div>
+      <button class="btn-primary" onclick="checkPassword()"
+        style="width:100%;justify-content:center;margin-top:8px">
+        Continuar →
+      </button>
+
+      <!-- EmailJS setup (collapsible) -->
+      <details style="margin-top:22px">
+        <summary style="font-size:11px;color:var(--text-muted);cursor:pointer;user-select:none;outline:none">
+          ⚙️ Configurar envio real de email (EmailJS) ▸
+        </summary>
+        <div style="margin-top:14px">
+          <div class="setup-box">
+            <strong>Passos para receber o código no Gmail:</strong>
+          </div>
+          <ol class="setup-steps">
+            <li>Acesse <strong>emailjs.com</strong> → crie conta grátis (200 emails/mês)</li>
+            <li>Em <strong>Email Services</strong> → Add Service → Gmail → conecte sua conta → copie o <code>Service ID</code></li>
+            <li>Em <strong>Email Templates</strong> → Create Template → coloque <code>{{code}}</code> no corpo → copie o <code>Template ID</code></li>
+            <li>Em <strong>Account → General</strong> → copie a <code>Public Key</code></li>
+            <li>Cole os 3 valores abaixo e clique em Salvar</li>
+          </ol>
+          <div style="margin-top:14px;display:grid;gap:10px">
+            <div><label class="form-label">Public Key</label>
+              <input type="text" class="form-input" id="cfg-pubkey" placeholder="user_xxxxxxxxxx" style="font-size:12px"></div>
+            <div><label class="form-label">Service ID</label>
+              <input type="text" class="form-input" id="cfg-service" placeholder="service_xxxxxxx" style="font-size:12px"></div>
+            <div><label class="form-label">Template ID</label>
+              <input type="text" class="form-input" id="cfg-template" placeholder="template_xxxxxxx" style="font-size:12px"></div>
+            <button class="btn-admin primary" onclick="saveEJSConfig()" style="font-size:12px;margin-top:4px">
+              💾 Salvar Configuração EmailJS
+            </button>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <!-- Panel 2: code -->
+    <div class="login-panel" id="panel-step2">
+      <div class="email-chip">
+        <span style="font-size:22px">📧</span>
+        <div>Código enviado para<br><strong id="email-display">levibonitao12345@gmail.com</strong></div>
+      </div>
+
+      <div class="sending-row" id="sending-row">
+        <span class="loading-spinner" style="border-color:rgba(255,255,255,0.15);border-top-color:var(--accent2)"></span>
+        Enviando código para seu Gmail...
+      </div>
+
+      <p style="text-align:center;font-size:13px;color:var(--text-muted);margin-bottom:2px">
+        Digite o código de 6 dígitos:
+      </p>
+
+      <div class="code-inputs">
+        <input class="code-input" maxlength="1" type="text" inputmode="numeric" id="ci0"
+          oninput="codeInput(0)" onkeydown="codeKey(event,0)">
+        <input class="code-input" maxlength="1" type="text" inputmode="numeric" id="ci1"
+          oninput="codeInput(1)" onkeydown="codeKey(event,1)">
+        <input class="code-input" maxlength="1" type="text" inputmode="numeric" id="ci2"
+          oninput="codeInput(2)" onkeydown="codeKey(event,2)">
+        <input class="code-input" maxlength="1" type="text" inputmode="numeric" id="ci3"
+          oninput="codeInput(3)" onkeydown="codeKey(event,3)">
+        <input class="code-input" maxlength="1" type="text" inputmode="numeric" id="ci4"
+          oninput="codeInput(4)" onkeydown="codeKey(event,4)">
+        <input class="code-input" maxlength="1" type="text" inputmode="numeric" id="ci5"
+          oninput="codeInput(5)" onkeydown="codeKey(event,5)">
+      </div>
+
+      <div class="code-timer">Código expira em <span id="timer-val">10:00</span></div>
+      <button class="resend-btn" id="resend-btn" onclick="resendCode()" disabled>🔄 Reenviar código</button>
+
+      <button class="btn-primary" id="btn-verify" onclick="verifyCode()" disabled
+        style="width:100%;justify-content:center;margin-top:16px">
+        ✅ Verificar e Entrar
+      </button>
+
+      <button onclick="goBack()"
+        style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;display:block;margin:12px auto 0;font-family:'Exo 2',sans-serif">
+        ← Voltar
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     ADMIN APP
+═══════════════════════════════════════ -->
+<div id="admin-app" style="display:none">
+  <div class="admin-wrapper">
+    <aside class="admin-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">🎮 Roblox<span>Store</span></div>
+        <div class="sidebar-subtitle">Painel de Controle</div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-group-label">Principal</div>
+        <button class="admin-nav-item active" onclick="showPanel('dashboard')" data-panel="dashboard"><span class="nav-icon">📊</span> Dashboard</button>
+        <div class="nav-group-label">Catálogo</div>
+        <button class="admin-nav-item" onclick="showPanel('products')" data-panel="products"><span class="nav-icon">🛍</span> Produtos</button>
+        <button class="admin-nav-item" onclick="showPanel('stock')" data-panel="stock"><span class="nav-icon">📦</span> Estoque de Contas</button>
+        <div class="nav-group-label">Vendas</div>
+        <button class="admin-nav-item" onclick="showPanel('orders')" data-panel="orders"><span class="nav-icon">📋</span> Pedidos <span class="nav-badge" id="orders-badge">0</span></button>
+        <button class="admin-nav-item" onclick="showPanel('reviews')" data-panel="reviews"><span class="nav-icon">⭐</span> Avaliações</button>
+        <div class="nav-group-label">Sistema</div>
+        <button class="admin-nav-item" onclick="showPanel('config')" data-panel="config"><span class="nav-icon">⚙️</span> Configurações</button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="admin-user">
+          <div class="admin-avatar">👑</div>
+          <div class="admin-user-info">
+            <div class="admin-name">Administrador</div>
+            <div class="admin-role">Super Admin</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <div class="admin-topbar">
+        <div>
+          <div class="topbar-title" id="topbar-title">Dashboard</div>
+          <div class="topbar-breadcrumb" id="topbar-breadcrumb">Visão geral do sistema</div>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn-admin" onclick="window.open('index.html','_blank')">🌐 Ver Loja</button>
+          <button class="btn-admin danger" onclick="doLogout()">⏻ Sair</button>
+        </div>
+      </div>
+
+      <!-- Dashboard -->
+      <div class="admin-panel active" id="panel-dashboard">
+        <div class="stats-grid" id="stats-grid"></div>
+        <div class="admin-table-wrap">
+          <div class="admin-table-header"><span class="admin-table-title">📋 Pedidos Recentes</span></div>
+          <table class="admin-table" id="recent-orders-table"></table>
+        </div>
+      </div>
+
+      <!-- Products -->
+      <div class="admin-panel" id="panel-products">
+        <div class="admin-form-card">
+          <div class="admin-form-title" id="product-form-title">➕ Adicionar Produto</div>
+          <input type="hidden" id="edit-product-id">
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Nome</label><input type="text" class="admin-input" id="p-name" placeholder="Ex: Conta Roblox Premium"></div>
+            <div class="form-group"><label class="form-label">Categoria</label>
+              <select class="admin-select" id="p-category">
+                <option value="contas">👤 Contas</option>
+                <option value="scripts">🔧 Scripts</option>
+                <option value="gamepasses">🎫 Gamepasses</option>
+                <option value="outros">💎 Outros</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">Preço (R$)</label><input type="number" class="admin-input" id="p-price" placeholder="29.90" step="0.01"></div>
+            <div class="form-group"><label class="form-label">Preço Original</label><input type="number" class="admin-input" id="p-original" placeholder="49.90" step="0.01"></div>
+            <div class="form-group"><label class="form-label">Ícone (emoji)</label><input type="text" class="admin-input" id="p-image" placeholder="🎮" maxlength="4"></div>
+            <div class="form-group"><label class="form-label">Badge</label><input type="text" class="admin-input" id="p-badge" placeholder="POPULAR, NOVO..."></div>
+            <div class="form-group form-full"><label class="form-label">Descrição</label><textarea class="admin-textarea" id="p-desc"></textarea></div>
+            <div class="form-group form-full"><label class="form-label">Características (vírgula)</label><input type="text" class="admin-input" id="p-features" placeholder="Entrega imediata, Suporte 24h"></div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <button class="btn-admin primary" onclick="saveProduct()">💾 Salvar</button>
+            <button class="btn-admin" onclick="resetProductForm()">✕ Cancelar</button>
+          </div>
+        </div>
+        <div class="admin-table-wrap">
+          <div class="admin-table-header"><span class="admin-table-title">🛍 Produtos</span><span id="product-count-badge" class="nav-badge" style="background:var(--surface);color:var(--text-secondary);border:1px solid var(--border)">0</span></div>
+          <table class="admin-table" id="products-table"></table>
+        </div>
+      </div>
+
+      <!-- Stock -->
+      <div class="admin-panel" id="panel-stock">
+        <div class="admin-form-card">
+          <div class="admin-form-title">📦 Adicionar ao Estoque</div>
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Produto</label><select class="admin-select" id="acc-product"></select></div>
+            <div class="form-group"><label class="form-label">Nick (opcional)</label><input type="text" class="admin-input" id="acc-nick" placeholder="NomeDoJogador"></div>
+            <div class="form-group form-full"><label class="form-label">Senha / Key</label><input type="text" class="admin-input" id="acc-pass" placeholder="Senha ou chave do produto"></div>
+          </div>
+          <button class="btn-admin primary" onclick="addStockItem()" style="margin-top:16px">📥 Adicionar</button>
+        </div>
+        <div class="admin-table-wrap">
+          <div class="admin-table-header"><span class="admin-table-title">📦 Estoque</span></div>
+          <table class="admin-table" id="stock-table"></table>
+        </div>
+      </div>
+
+      <!-- Orders -->
+      <div class="admin-panel" id="panel-orders">
+        <div class="admin-table-wrap">
+          <div class="admin-table-header"><span class="admin-table-title">📋 Pedidos</span></div>
+          <table class="admin-table" id="orders-table"></table>
+        </div>
+      </div>
+
+      <!-- Reviews -->
+      <div class="admin-panel" id="panel-reviews">
+        <div class="admin-table-wrap">
+          <div class="admin-table-header"><span class="admin-table-title">⭐ Avaliações</span></div>
+          <table class="admin-table" id="reviews-table"></table>
+        </div>
+      </div>
+
+      <!-- Config -->
+      <div class="admin-panel" id="panel-config">
+        <div class="admin-form-card">
+          <div class="admin-form-title">⚙️ Configurações</div>
+          <div class="config-grid">
+            <div class="form-group"><label class="form-label">Nome do Site</label><input type="text" class="admin-input" id="cfg-name"></div>
+            <div class="form-group"><label class="form-label">Faixa de Anúncio</label><input type="text" class="admin-input" id="cfg-announcement"></div>
+            <div class="form-group"><label class="form-label">Título do Hero</label><input type="text" class="admin-input" id="cfg-hero-title"></div>
+            <div class="form-group"><label class="form-label">Subtítulo do Hero</label><input type="text" class="admin-input" id="cfg-hero-subtitle"></div>
+          </div>
+          <button class="btn-admin primary" onclick="saveConfig()" style="margin-top:16px">💾 Salvar</button>
+        </div>
+        <div class="admin-form-card" style="border-color:rgba(255,82,82,0.3)">
+          <div class="admin-form-title" style="color:var(--error)">⚠️ Zona de Perigo</div>
+          <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Ações irreversíveis.</p>
+          <button class="btn-admin danger" onclick="resetAllData()">🗑 Resetar Dados</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/database.js"></script>
+<script src="js/store.js"></script>
+<script>
+// ════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════
+const ADMIN_USER  = 'admin';
+const ADMIN_PASS  = 'admin123';
+const ADMIN_EMAIL = 'levibonitao12345@gmail.com';
+
+let _code = '';
+let _expiry = 0;
+let _timerInt = null;
+let _resendInt = null;
+
+// ── Persist EmailJS config ───────────────
+function getEJSCfg() {
+  return JSON.parse(localStorage.getItem('rbx_ejs_cfg') || '{}');
+}
+
+function saveEJSConfig() {
+  const cfg = {
+    pk:  document.getElementById('cfg-pubkey').value.trim(),
+    sid: document.getElementById('cfg-service').value.trim(),
+    tid: document.getElementById('cfg-template').value.trim()
+  };
+  if (!cfg.pk || !cfg.sid || !cfg.tid) {
+    showNotification('⚠️ Preencha os 3 campos!', 'warning'); return;
+  }
+  localStorage.setItem('rbx_ejs_cfg', JSON.stringify(cfg));
+  emailjs.init(cfg.pk);
+  showNotification('✅ EmailJS configurado! Teste fazendo login.', 'success');
+}
+
+// ── Init ─────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  DB.init();
+
+  // restore emailjs fields
+  const c = getEJSCfg();
+  if (c.pk) {
+    emailjs.init(c.pk);
+    document.getElementById('cfg-pubkey').value  = c.pk;
+    document.getElementById('cfg-service').value = c.sid;
+    document.getElementById('cfg-template').value= c.tid;
+  }
+
+  // auto-login if session exists
+  if (sessionStorage.getItem('admin_ok') === '1') {
+    showApp();
+  }
+});
+
+// ════════════════════════════════════════
+//  STEP 1 – check password
+// ════════════════════════════════════════
+async function checkPassword() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  if (u !== ADMIN_USER || p !== ADMIN_PASS) {
+    showNotification('❌ Usuário ou senha incorretos!', 'error');
+    const el = document.getElementById('login-pass');
+    el.style.borderColor = 'var(--error)';
+    setTimeout(() => el.style.borderColor = '', 1500);
+    return;
+  }
+  // move to step 2
+  setStep(2);
+  document.getElementById('panel-step1').classList.remove('active');
+  document.getElementById('panel-step2').classList.add('active');
+  await sendCode();
+}
+
+function goBack() {
+  clearInterval(_timerInt);
+  clearInterval(_resendInt);
+  setStep(1);
+  document.getElementById('panel-step2').classList.remove('active');
+  document.getElementById('panel-step1').classList.add('active');
+  resetBoxes();
+}
+
+// ════════════════════════════════════════
+//  STEP 2 – send code
+// ════════════════════════════════════════
+async function sendCode() {
+  _code   = String(Math.floor(100000 + Math.random() * 900000));
+  _expiry = Date.now() + 10 * 60 * 1000;
+
+  // Show sending indicator
+  const row = document.getElementById('sending-row');
+  row.style.display = 'flex';
+  row.innerHTML = `<span class="loading-spinner" style="border-color:rgba(255,255,255,0.15);border-top-color:var(--accent2)"></span> Enviando código para seu Gmail...`;
+
+  const cfg = getEJSCfg();
+  const now = new Date().toLocaleTimeString('pt-BR');
+
+  if (cfg.pk && cfg.sid && cfg.tid) {
+    try {
+      await emailjs.send(cfg.sid, cfg.tid, {
+        to_email: ADMIN_EMAIL,
+        to_name:  'Administrador',
+        code:     _code,
+        expiry:   '10 minutos',
+        time:     now
+      });
+      row.innerHTML = '✅ Código enviado para <strong>' + ADMIN_EMAIL + '</strong>';
+      row.style.color = 'var(--success)';
+      setTimeout(() => row.style.display = 'none', 3500);
+      showNotification('📧 Verifique seu Gmail!', 'success');
+    } catch (e) {
+      console.error(e);
+      row.style.display = 'none';
+      showNotification('⚠️ Falha no EmailJS — modo demo ativo', 'warning');
+      showNotification('🔑 Código DEMO: ' + _code, 'info');
+    }
+  } else {
+    // No EmailJS → show code in notification (demo mode)
+    await new Promise(r => setTimeout(r, 900));
+    row.style.display = 'none';
+    showNotification('⚙️ EmailJS não configurado — modo demo', 'warning');
+    showNotification('🔑 Código DEMO: ' + _code, 'info');
+    console.log('[DEMO] Código:', _code);
+  }
+
+  startTimer();
+  startResend();
+  document.getElementById('ci0').focus();
+}
+
+async function resendCode() {
+  resetBoxes();
+  document.getElementById('sending-row').style.display = 'flex';
+  document.getElementById('sending-row').innerHTML = `<span class="loading-spinner" style="border-color:rgba(255,255,255,0.15);border-top-color:var(--accent2)"></span> Reenviando...`;
+  await sendCode();
+}
+
+// ════════════════════════════════════════
+//  Timer & resend
+// ════════════════════════════════════════
+function startTimer() {
+  clearInterval(_timerInt);
+  _timerInt = setInterval(() => {
+    const left = Math.max(0, _expiry - Date.now());
+    const m = String(Math.floor(left / 60000)).padStart(2,'0');
+    const s = String(Math.floor((left % 60000) / 1000)).padStart(2,'0');
+    const el = document.getElementById('timer-val');
+    if (el) el.textContent = `${m}:${s}`;
+    if (left === 0) {
+      clearInterval(_timerInt);
+      document.getElementById('btn-verify').disabled = true;
+      showNotification('⏰ Código expirado! Reenvie.', 'warning');
+    }
+  }, 1000);
+}
+
+function startResend() {
+  clearInterval(_resendInt);
+  const btn = document.getElementById('resend-btn');
+  btn.disabled = true;
+  let s = 60;
+  btn.textContent = `🔄 Reenviar em ${s}s`;
+  _resendInt = setInterval(() => {
+    s--;
+    if (s <= 0) {
+      btn.textContent = '🔄 Reenviar código';
+      btn.disabled = false;
+      clearInterval(_resendInt);
+    } else {
+      btn.textContent = `🔄 Reenviar em ${s}s`;
+    }
+  }, 1000);
+}
+
+// ════════════════════════════════════════
+//  Code box interactions
+// ════════════════════════════════════════
+function codeInput(i) {
+  const el = document.getElementById('ci'+i);
+  el.value = el.value.replace(/\D/g,'').slice(-1);
+  if (el.value) { el.classList.add('filled'); if (i < 5) document.getElementById('ci'+(i+1)).focus(); }
+  else el.classList.remove('filled');
+  checkFull();
+}
+
+function codeKey(e, i) {
+  if (e.key === 'Backspace') {
+    const el = document.getElementById('ci'+i);
+    if (!el.value && i > 0) document.getElementById('ci'+(i-1)).focus();
+    el.classList.remove('filled');
+    checkFull();
+  }
+  if (e.key === 'Enter' && !document.getElementById('btn-verify').disabled) verifyCode();
+}
+
+function checkFull() {
+  const full = Array.from({length:6},(_,i)=>document.getElementById('ci'+i).value).join('').length === 6;
+  document.getElementById('btn-verify').disabled = !full;
+}
+
+function getCode() {
+  return Array.from({length:6},(_,i)=>document.getElementById('ci'+i).value).join('');
+}
+
+function resetBoxes() {
+  for (let i=0;i<6;i++){const e=document.getElementById('ci'+i);e.value='';e.classList.remove('filled','error');}
+  document.getElementById('btn-verify').disabled = true;
+}
+
+function shakeBoxes() {
+  for (let i=0;i<6;i++){
+    const e=document.getElementById('ci'+i);
+    e.classList.add('error');
+    setTimeout(()=>e.classList.remove('error'),500);
+  }
+}
+
+// ════════════════════════════════════════
+//  Verify
+// ════════════════════════════════════════
+function verifyCode() {
+  if (Date.now() > _expiry) { showNotification('⏰ Código expirado!','error'); shakeBoxes(); return; }
+  if (getCode() !== _code)  { showNotification('❌ Código incorreto!','error'); shakeBoxes(); setTimeout(resetBoxes, 600); return; }
+
+  clearInterval(_timerInt);
+  clearInterval(_resendInt);
+  showNotification('✅ Acesso liberado!', 'success');
+  sessionStorage.setItem('admin_ok', '1');
+  setTimeout(() => {
+    document.getElementById('login-screen').style.display = 'none';
+    showApp();
+  }, 500);
+}
+
+// ════════════════════════════════════════
+//  Step UI
+// ════════════════════════════════════════
+function setStep(n) {
+  for (let i=1;i<=2;i++){
+    const el=document.getElementById('step-ind-'+i);
+    el.classList.remove('active','done');
+    if (i < n) el.classList.add('done');
+    else if (i === n) el.classList.add('active');
+  }
+}
+
+// ════════════════════════════════════════
+//  Admin App bootstrap
+// ════════════════════════════════════════
+function showApp() {
+  document.getElementById('admin-app').style.display = 'block';
+  initAdmin();
+}
+
+function doLogout() {
+  sessionStorage.removeItem('admin_ok');
+  location.reload();
+}
+
+function initAdmin() {
+  renderDashboard();
+  renderProductsTable();
+  renderStockTable();
+  renderOrdersTable();
+  renderReviewsTable();
+  loadConfig();
+  populateProductSelect();
+  updateOrdersBadge();
+}
+
+// ─── Panel switching ────────────────────
+const PANELS = {
+  dashboard:{ title:'Dashboard',       sub:'Visão geral do sistema' },
+  products: { title:'🛍 Produtos',      sub:'Gerenciar catálogo' },
+  stock:    { title:'📦 Estoque',       sub:'Contas disponíveis' },
+  orders:   { title:'📋 Pedidos',       sub:'Histórico de vendas' },
+  reviews:  { title:'⭐ Avaliações',    sub:'Avaliações dos clientes' },
+  config:   { title:'⚙️ Configurações', sub:'Configurações do site' }
+};
+
+function showPanel(name) {
+  document.querySelectorAll('.admin-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.admin-nav-item').forEach(b=>b.classList.toggle('active',b.dataset.panel===name));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.getElementById('topbar-title').textContent = PANELS[name]?.title || name;
+  document.getElementById('topbar-breadcrumb').textContent = PANELS[name]?.sub || '';
+  if (name==='dashboard') renderDashboard();
+  if (name==='products')  renderProductsTable();
+  if (name==='stock')     { renderStockTable(); populateProductSelect(); }
+  if (name==='orders')    renderOrdersTable();
+  if (name==='reviews')   renderReviewsTable();
+  if (name==='config')    loadConfig();
+}
+
+// ─── Dashboard ──────────────────────────
+function renderDashboard() {
+  const P=DB.getProducts(), O=DB.getOrders(), A=DB.getAccounts();
+  const rev=O.reduce((s,o)=>s+(o.total||0),0);
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat-card"><div class="stat-card-icon">🛍</div><div class="stat-card-value">${P.length}</div><div class="stat-card-label">Produtos</div></div>
+    <div class="stat-card"><div class="stat-card-icon">📋</div><div class="stat-card-value">${O.length}</div><div class="stat-card-label">Pedidos</div></div>
+    <div class="stat-card"><div class="stat-card-icon">📦</div><div class="stat-card-value">${A.filter(a=>!a.sold).length}</div><div class="stat-card-label">Estoque</div></div>
+    <div class="stat-card"><div class="stat-card-icon">💰</div><div class="stat-card-value">R$ ${rev.toFixed(2)}</div><div class="stat-card-label">Receita</div></div>`;
+  document.getElementById('recent-orders-table').innerHTML=`
+    <thead><tr><th>Pedido</th><th>Cliente</th><th>Email</th><th>Total</th><th>Status</th><th>Data</th></tr></thead>
+    <tbody>${O.slice(0,10).length===0?`<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">Nenhum pedido ainda</td></tr>`:
+      O.slice(0,10).map(o=>`<tr>
+        <td><strong>${o.id}</strong></td><td>${o.customerName}</td>
+        <td style="color:var(--text-muted)">${o.customerEmail}</td>
+        <td style="color:var(--accent);font-weight:700">R$ ${(o.total||0).toFixed(2)}</td>
+        <td><span class="status-badge completed">✓ Concluído</span></td>
+        <td style="color:var(--text-muted)">${new Date(o.createdAt).toLocaleDateString('pt-BR')}</td>
+      </tr>`).join('')}</tbody>`;
+}
+
+// ─── Products ───────────────────────────
+function renderProductsTable() {
+  const P=DB.getProducts();
+  document.getElementById('product-count-badge').textContent=P.length;
+  document.getElementById('products-table').innerHTML=`
+    <thead><tr><th>Ícone</th><th>Nome</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Ações</th></tr></thead>
+    <tbody>${P.length===0?`<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">Nenhum produto</td></tr>`:
+      P.map(p=>`<tr>
+        <td style="font-size:22px">${p.image}</td>
+        <td><strong>${p.name}</strong>${p.badge?` <span style="font-size:10px;color:var(--accent)">[${p.badge}]</span>`:''}</td>
+        <td style="color:var(--text-muted);text-transform:capitalize">${p.category}</td>
+        <td style="color:var(--accent);font-weight:700">R$ ${p.price.toFixed(2)}</td>
+        <td style="color:${DB.getStockCount(p.id)>0?'var(--success)':'var(--error)'}">${DB.getStockCount(p.id)} unid.</td>
+        <td><div class="table-actions">
+          <button class="tbl-btn edit" onclick="editProduct('${p.id}')">✏️ Editar</button>
+          <button class="tbl-btn del" onclick="deleteProduct('${p.id}')">🗑</button>
+        </div></td>
+      </tr>`).join('')}</tbody>`;
+}
+
+function saveProduct() {
+  const id=document.getElementById('edit-product-id').value;
+  const data={
+    name:document.getElementById('p-name').value.trim(),
+    category:document.getElementById('p-category').value,
+    price:parseFloat(document.getElementById('p-price').value),
+    originalPrice:parseFloat(document.getElementById('p-original').value)||null,
+    image:document.getElementById('p-image').value||'📦',
+    badge:document.getElementById('p-badge').value.trim()||null,
+    description:document.getElementById('p-desc').value.trim(),
+    features:document.getElementById('p-features').value.split(',').map(f=>f.trim()).filter(Boolean)
+  };
+  if(!data.name||!data.price){showNotification('⚠️ Nome e preço obrigatórios!','warning');return;}
+  if(id){DB.updateProduct(id,data);showNotification('✅ Atualizado!','success');}
+  else  {DB.addProduct(data);     showNotification('✅ Criado!','success');}
+  resetProductForm(); renderProductsTable(); populateProductSelect();
+}
+
+function editProduct(id) {
+  const p=DB.getProduct(id); if(!p)return;
+  document.getElementById('edit-product-id').value=id;
+  document.getElementById('p-name').value=p.name;
+  document.getElementById('p-category').value=p.category;
+  document.getElementById('p-price').value=p.price;
+  document.getElementById('p-original').value=p.originalPrice||'';
+  document.getElementById('p-image').value=p.image;
+  document.getElementById('p-badge').value=p.badge||'';
+  document.getElementById('p-desc').value=p.description;
+  document.getElementById('p-features').value=(p.features||[]).join(', ');
+  document.getElementById('product-form-title').textContent='✏️ Editar Produto';
+  document.getElementById('panel-products').scrollIntoView({behavior:'smooth'});
+}
+
+function deleteProduct(id) {
+  if(!confirm('Excluir produto?'))return;
+  DB.deleteProduct(id); renderProductsTable();
+  showNotification('🗑 Excluído!','success');
+}
+
+function resetProductForm() {
+  ['edit-product-id','p-name','p-price','p-original','p-image','p-badge','p-desc','p-features'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('product-form-title').textContent='➕ Adicionar Produto';
+}
+
+// ─── Stock ──────────────────────────────
+function populateProductSelect() {
+  const s=document.getElementById('acc-product'); if(!s)return;
+  s.innerHTML=DB.getProducts().map(p=>`<option value="${p.id}">${p.image} ${p.name}</option>`).join('');
+}
+
+function addStockItem() {
+  const pid=document.getElementById('acc-product').value;
+  const nick=document.getElementById('acc-nick').value.trim()||null;
+  const pass=document.getElementById('acc-pass').value.trim();
+  if(!pid||!pass){showNotification('⚠️ Produto e senha/key obrigatórios!','warning');return;}
+  DB.addAccount({productId:pid,nick,password:pass});
+  document.getElementById('acc-nick').value='';
+  document.getElementById('acc-pass').value='';
+  renderStockTable(); renderProductsTable();
+  showNotification('✅ Adicionado ao estoque!','success');
+}
+
+function renderStockTable() {
+  const A=DB.getAccounts();
+  document.getElementById('stock-table').innerHTML=`
+    <thead><tr><th>Produto</th><th>Nick</th><th>Senha/Key</th><th>Status</th><th>Ação</th></tr></thead>
+    <tbody>${A.length===0?`<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:30px">Vazio</td></tr>`:
+      A.map(a=>{const p=DB.getProduct(a.productId);return`<tr>
+        <td>${p?`${p.image} ${p.name}`:'—'}</td>
+        <td style="font-family:monospace">${a.nick||'—'}</td>
+        <td style="font-family:monospace;color:var(--text-muted)">${a.password}</td>
+        <td><span class="status-badge ${a.sold?'completed':'pending'}">${a.sold?'✓ Vendido':'○ Disponível'}</span></td>
+        <td>${!a.sold?`<button class="tbl-btn del" onclick="deleteStockItem('${a.id}')">🗑</button>`:'—'}</td>
+      </tr>`;}).join('')}</tbody>`;
+}
+
+function deleteStockItem(id) {
+  if(!confirm('Remover?'))return;
+  DB.deleteAccount(id); renderStockTable(); renderProductsTable();
+  showNotification('🗑 Removido!','success');
+}
+
+// ─── Orders ────────────────────────────
+function renderOrdersTable() {
+  const O=DB.getOrders();
+  document.getElementById('orders-table').innerHTML=`
+    <thead><tr><th>Pedido</th><th>Cliente</th><th>Email</th><th>Itens</th><th>Total</th><th>Pagamento</th><th>Data</th></tr></thead>
+    <tbody>${O.length===0?`<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px">Nenhum pedido</td></tr>`:
+      O.map(o=>`<tr>
+        <td><strong>${o.id}</strong></td><td>${o.customerName}</td>
+        <td style="color:var(--text-muted)">${o.customerEmail}</td>
+        <td>${(o.items||[]).length} item(s)</td>
+        <td style="color:var(--accent);font-weight:700">R$ ${(o.total||0).toFixed(2)}</td>
+        <td style="text-transform:capitalize">${o.paymentMethod||'—'}</td>
+        <td style="color:var(--text-muted)">${new Date(o.createdAt).toLocaleDateString('pt-BR')}</td>
+      </tr>`).join('')}</tbody>`;
+  updateOrdersBadge();
+}
+
+function updateOrdersBadge() {
+  const el=document.getElementById('orders-badge');
+  if(el)el.textContent=DB.getOrders().length;
+}
+
+// ─── Reviews ────────────────────────────
+function renderReviewsTable() {
+  const R=DB.getReviews();
+  document.getElementById('reviews-table').innerHTML=`
+    <thead><tr><th>Produto</th><th>Autor</th><th>Nota</th><th>Comentário</th><th>Data</th></tr></thead>
+    <tbody>${R.length===0?`<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:30px">Nenhuma avaliação</td></tr>`:
+      R.map(r=>{const p=DB.getProduct(r.productId);return`<tr>
+        <td>${p?`${p.image} ${p.name}`:'—'}</td>
+        <td><strong>${r.author}</strong></td>
+        <td style="color:var(--accent3)">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)} ${r.rating}/5</td>
+        <td style="color:var(--text-muted)">${r.comment}</td>
+        <td style="color:var(--text-muted)">${new Date(r.createdAt).toLocaleDateString('pt-BR')}</td>
+      </tr>`;}).join('')}</tbody>`;
+}
+
+// ─── Config ─────────────────────────────
+function loadConfig() {
+  const c=DB.getConfig();
+  document.getElementById('cfg-name').value=c.siteName||'';
+  document.getElementById('cfg-announcement').value=c.announcement||'';
+  document.getElementById('cfg-hero-title').value=c.bannerTitle||'';
+  document.getElementById('cfg-hero-subtitle').value=c.bannerSubtitle||'';
+}
+
+function saveConfig() {
+  DB.saveConfig({
+    siteName:document.getElementById('cfg-name').value,
+    announcement:document.getElementById('cfg-announcement').value,
+    bannerTitle:document.getElementById('cfg-hero-title').value,
+    bannerSubtitle:document.getElementById('cfg-hero-subtitle').value
+  });
+  showNotification('✅ Configurações salvas!','success');
+}
+
+function resetAllData() {
+  if(!confirm('Resetar todos os dados?'))return;
+  localStorage.removeItem('rbx_initialized');
+  DB.init(); initAdmin();
+  showNotification('♻️ Dados resetados!','info');
+}
+</script>
+</body>
+</html>
