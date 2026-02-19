@@ -374,6 +374,21 @@
             <div class="form-group"><label class="form-label">Título do Hero</label><input type="text" class="admin-input" id="cfg-hero-title"></div>
             <div class="form-group"><label class="form-label">Subtítulo do Hero</label><input type="text" class="admin-input" id="cfg-hero-subtitle"></div>
           </div>
+          <!-- PIX -->
+          <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+            <div style="font-family:Rajdhani,sans-serif;font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+              💠 Configuração do Pix
+              <span style="font-size:11px;font-family:Exo 2,sans-serif;font-weight:400;color:var(--text-muted)">Aparece no checkout quando cliente escolhe Pix</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+              <div><label class="form-label">🔑 Chave Pix</label>
+                <input type="text" class="admin-input" id="cfg-pix-key" placeholder="CPF, email, telefone ou chave aleatória"></div>
+              <div><label class="form-label">👤 Nome do Titular</label>
+                <input type="text" class="admin-input" id="cfg-pix-name" placeholder="Seu Nome Completo"></div>
+              <div><label class="form-label">🏦 Banco</label>
+                <input type="text" class="admin-input" id="cfg-pix-bank" placeholder="Nubank, Inter, Bradesco..."></div>
+            </div>
+          </div>
           <button class="btn-admin primary" onclick="saveConfig()" style="margin-top:16px">💾 Salvar</button>
         </div>
         <div class="admin-form-card" style="border-color:rgba(255,82,82,0.3)">
@@ -847,6 +862,9 @@ function loadConfig() {
   document.getElementById('cfg-announcement').value=c.announcement||'';
   document.getElementById('cfg-hero-title').value=c.bannerTitle||'';
   document.getElementById('cfg-hero-subtitle').value=c.bannerSubtitle||'';
+  document.getElementById('cfg-pix-key').value=c.pixKey||'';
+  document.getElementById('cfg-pix-name').value=c.pixName||'';
+  document.getElementById('cfg-pix-bank').value=c.pixBank||'';
 }
 
 function saveConfig() {
@@ -854,7 +872,10 @@ function saveConfig() {
     siteName:document.getElementById('cfg-name').value,
     announcement:document.getElementById('cfg-announcement').value,
     bannerTitle:document.getElementById('cfg-hero-title').value,
-    bannerSubtitle:document.getElementById('cfg-hero-subtitle').value
+    bannerSubtitle:document.getElementById('cfg-hero-subtitle').value,
+    pixKey:document.getElementById('cfg-pix-key').value.trim(),
+    pixName:document.getElementById('cfg-pix-name').value.trim(),
+    pixBank:document.getElementById('cfg-pix-bank').value.trim()
   });
   showNotification('✅ Configurações salvas!','success');
 }
